@@ -26,6 +26,7 @@ food_eaten = 0
 # Fonts
 font_style = pygame.font.SysFont(None, 50)
 score_font = pygame.font.SysFont(None, 35)
+speed_font = pygame.font.SysFont(None, 35)
 
 def message(msg, color):
     mesg = font_style.render(msg, True, color)
@@ -41,6 +42,12 @@ def display_score(score):
     screen.blit(value, [0, 0])
 
 def game_loop(food_eaten):
+    
+    def display_speed(SNAKE_SPEED):
+        value = speed_font.render("Speed: " + str(SNAKE_SPEED), True, WHITE)
+        screen.blit(value, [0, 30])
+        
+        (SNAKE_SPEED + food_eaten*2)
     
     # snake spped and game rules
     
@@ -95,16 +102,16 @@ def game_loop(food_eaten):
                 game_over = True
             if event.type == pygame.KEYDOWN:
                 # Prevent immediate reversal
-                if event.key == pygame.K_LEFT and x1_change == 0:
+                if event.key == pygame.K_LEFT:
                     x1_change = -SNAKE_BLOCK_SIZE
                     y1_change = 0
-                elif event.key == pygame.K_RIGHT and x1_change == 0:
+                elif event.key == pygame.K_RIGHT:
                     x1_change = SNAKE_BLOCK_SIZE
                     y1_change = 0
-                elif event.key == pygame.K_UP and y1_change == 0:
+                elif event.key == pygame.K_UP:
                     y1_change = -SNAKE_BLOCK_SIZE
                     x1_change = 0
-                elif event.key == pygame.K_DOWN and y1_change == 0:
+                elif event.key == pygame.K_DOWN:
                     y1_change = SNAKE_BLOCK_SIZE
                     x1_change = 0
 
@@ -114,9 +121,19 @@ def game_loop(food_eaten):
 
         # --- Collision Checks ---
 
-        # Wall Collision
-        if x1 < 0 or x1 >= SCREEN_WIDTH or y1 < 0 or y1 >= SCREEN_HEIGHT:
-            game_close = True
+        # Wall passthrough
+        if x1 < 0:
+            x1 = SCREEN_WIDTH + x1
+        
+        if x1 >= SCREEN_WIDTH:
+            x1 = SCREEN_WIDTH - x1
+        
+        if y1 < 0: 
+            y1 = SCREEN_HEIGHT+ y1
+
+        if y1 >= SCREEN_HEIGHT:
+            y1 = SCREEN_HEIGHT - y1
+        
 
         screen.fill(BLACK)
         pygame.draw.rect(screen, RED, [food_x, food_y, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
@@ -126,6 +143,10 @@ def game_loop(food_eaten):
         snake_head = [x1, y1] # Using list literal for clarity
         snake_list.append(snake_head)
 
+        for x, y in snake_list[1:]:
+            if len(snake_list) > 1 and snake_head[0] == x and snake_head[1] == y:
+                game_over = False # TODO FIX THIS
+
         # Remove tail if snake is too long
         if len(snake_list) > length_of_snake:
             del snake_list[0]
@@ -133,13 +154,14 @@ def game_loop(food_eaten):
         # drawing the snake and displaying the score
         our_snake(SNAKE_BLOCK_SIZE, snake_list)
         display_score(length_of_snake - 1)
+        display_speed(SNAKE_SPEED + food_eaten*2)
 
         pygame.display.update()
 
         # Food Collision (Check if head position matches food position)
         if x1 == food_x and y1 == food_y:
             food_x, food_y = generate_food_position()
-            length_of_snake += 1
+            length_of_snake += 3
             food_eaten += 1
 
             # Important: Make sure new food doesn't spawn on the snake
@@ -150,7 +172,7 @@ def game_loop(food_eaten):
         # Food Collision for x2 and y2(Check if head position matches food position)
         if x1 == food_x2 and y1 == food_y2:
             food_x2, food_y2 = generate_food_position()
-            length_of_snake += 1
+            length_of_snake += 3
             food_eaten += 1
 
             # Important: Make sure new food doesn't spawn on the snake (for x2 and y2)
