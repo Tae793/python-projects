@@ -3,6 +3,9 @@
 
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ----- Setup -----
 # You (the mentor) will need to create a Twitch Developer app and get:
