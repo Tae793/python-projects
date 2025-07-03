@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Initialize Pygame
 pygame.init()
@@ -24,6 +25,10 @@ BLACK = (0, 0, 0)
 # Snake properties
 SNAKE_BLOCK_SIZE = 20 # Keep this consistent for grid
 food_eaten = 0
+SNAKE_SPEED = 6
+wall_spawn_start_time = int(time.time())  # Track game start time
+wall_list = []
+wall_spawn_interval = 6  # seconds
 
 # Fonts
 font_style = pygame.font.SysFont(None, 50)
@@ -43,7 +48,12 @@ def display_score(score):
     value = score_font.render("Your Score: " + str(score), True, WHITE)
     screen.blit(value, [0, 0])
 
-def game_loop(food_eaten):
+def game_loop(food_eaten, SNAKE_SPEED):
+    global wall_spawn_start_time
+    global wall_list
+    
+    wall_list = [] # reset walls on game start
+    wall_spawn_start_time = int(time.time())  # Also reset wall timer
     
     def display_speed(SNAKE_SPEED):
         value = speed_font.render("Speed: " + str(SNAKE_SPEED), True, WHITE)
@@ -51,9 +61,8 @@ def game_loop(food_eaten):
         
         (SNAKE_SPEED + food_eaten*2)
     
-    # snake speed and game rules
+    # game rules
     
-    SNAKE_SPEED = 6
     print(SNAKE_SPEED)
     game_over = False
     game_close = False
@@ -88,8 +97,9 @@ def game_loop(food_eaten):
         while game_close:
             screen.fill(BLACK)
             message("You Lost! Press Q-Quit or C-Play Again", RED)
-            display_score(length_of_snake - 1)
+            display_score(food_eaten)
             pygame.display.update()
+            wall_blocks == spawn_wall(0)
 
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -97,7 +107,7 @@ def game_loop(food_eaten):
                         game_over = True
                         game_close = False
                     if event.key == pygame.K_c:
-                        game_loop() # Restart the game
+                        game_loop(0, 6) # Restart the game
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -140,6 +150,9 @@ def game_loop(food_eaten):
         screen.fill(BLACK)
         pygame.draw.rect(screen, RED, [food_x, food_y, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
         pygame.draw.rect(screen, RED, [food_x2, food_y2, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
+        # Draw all walls
+        for wall in wall_list:
+            pygame.draw.rect(screen, WHITE, [wall[0], wall[1], SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
 
         # Assuming x1, y1 are the new coordinates for the snake's head
         snake_head = [x1, y1]
@@ -147,7 +160,7 @@ def game_loop(food_eaten):
         # --- Check for self-collision BEFORE adding the new head to snake_list ---
         for segment in snake_list: # Iterate through the *existing* snake body
             if snake_head == segment: # Compare the new head's position with existing body segments
-                game_over = True
+                game_close = True
                 break # No need to check further if a collision is found
 
         # --- If no collision, then update the snake's list ---
@@ -160,7 +173,7 @@ def game_loop(food_eaten):
 
         # drawing the snake and displaying the score
         our_snake(SNAKE_BLOCK_SIZE, snake_list)
-        display_score(length_of_snake - 1)
+        display_score(food_eaten)
         display_speed(SNAKE_SPEED + food_eaten*2)
 
         pygame.display.update()
@@ -187,9 +200,58 @@ def game_loop(food_eaten):
             while [food_x2, food_y2] in snake_list:
                 food_x2, food_y2 = generate_food_position()
 
+        # walls implementation
+        def spawn_wall(length=5):
+            # Randomly choose orientation: 0 = horizontal, 1 = vertical
+            orientation = random.choice([0, 1])
+            while True:
+                wall_blocks = []
+                wall_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+                wall_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+                for i in range(length):
+                    if orientation == 0:  # horizontal
+                        wx = wall_x + i * SNAKE_BLOCK_SIZE
+                        wy = wall_y
+                    else:  # vertical
+                        wx = wall_x
+                        wy = wall_y + i * SNAKE_BLOCK_SIZE
+                    # Check bounds
+                    if wx >= SCREEN_WIDTH or wy >= SCREEN_HEIGHT:
+                        break
+                    wall_blocks.append([wx, wy])
+                # Make sure all blocks are valid and not on snake or food
+                if (len(wall_blocks) == length and
+                    all(block not in snake_list and
+                        block != [food_x, food_y] and
+                        block != [food_x2, food_y2] for block in wall_blocks)):
+                    return wall_blocks
+        # Generate a wall block not on the snake or food
+            while True:
+                wall_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+                wall_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+                if ([wall_x, wall_y] not in snake_list and
+                    [wall_x, wall_y] != [food_x, food_y] and
+                    [wall_x, wall_y] != [food_x2, food_y2]):
+                    wall_spawn_start_time = current_time
+                    return [wall_x, wall_y]
+    
+        # --- Wall spawning logic ---
+        current_time = int(time.time())
+        print(f"elapsed time: {current_time - wall_spawn_start_time}")
+        if current_time - wall_spawn_start_time >= wall_spawn_interval:
+            wall_blocks = spawn_wall(length=random.randint(5, 10))
+            wall_list.extend(wall_blocks)
+            wall_spawn_start_time = current_time  # <-- Reset timer here
+
+        # --- Check for collision with walls ---
+        for wall in wall_list:
+            if snake_head == wall:
+                game_close = True
+                break
+               
         clock.tick(SNAKE_SPEED + food_eaten*2)
 
     pygame.quit()
     quit()
 
-game_loop(food_eaten)
+game_loop(food_eaten, SNAKE_SPEED)
