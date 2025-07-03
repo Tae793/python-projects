@@ -237,7 +237,6 @@ def game_loop(food_eaten, SNAKE_SPEED):
     
         # --- Wall spawning logic ---
         current_time = int(time.time())
-        print(f"elapsed time: {current_time - wall_spawn_start_time}")
         if current_time - wall_spawn_start_time >= wall_spawn_interval:
             wall_blocks = spawn_wall(length=random.randint(5, 10))
             wall_list.extend(wall_blocks)
