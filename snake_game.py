@@ -25,10 +25,14 @@ BLACK = (0, 0, 0)
 # Snake properties
 SNAKE_BLOCK_SIZE = 20 # Keep this consistent for grid
 food_eaten = 0
-SNAKE_SPEED = 6
+SNAKE_SPEED = 12
 wall_spawn_start_time = int(time.time())  # Track game start time
 wall_list = []
 wall_spawn_interval = 6  # seconds
+
+# initial game state
+food1_big = False
+food2_big = False
 
 # Fonts
 font_style = pygame.font.SysFont(None, 50)
@@ -51,6 +55,11 @@ def display_score(score):
 def game_loop(food_eaten, SNAKE_SPEED):
     global wall_spawn_start_time
     global wall_list
+    global food1_big
+    global food2_big
+
+    # boost berry variables
+    boost_berry_size = SNAKE_BLOCK_SIZE * 2
     
     wall_list = [] # reset walls on game start
     wall_spawn_start_time = int(time.time())  # Also reset wall timer
@@ -62,8 +71,6 @@ def game_loop(food_eaten, SNAKE_SPEED):
         (SNAKE_SPEED + food_eaten*2)
     
     # game rules
-    
-    print(SNAKE_SPEED)
     game_over = False
     game_close = False
 
@@ -148,8 +155,20 @@ def game_loop(food_eaten, SNAKE_SPEED):
         
 
         screen.fill(BLACK)
-        pygame.draw.rect(screen, RED, [food_x, food_y, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
-        pygame.draw.rect(screen, RED, [food_x2, food_y2, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
+        
+        if food1_big == True:
+            pygame.draw.rect(screen, RED, [food_x, food_y, boost_berry_size, boost_berry_size])
+        else:
+            pygame.draw.rect(screen, RED, [food_x, food_y, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
+
+        if food2_big == True:
+            pygame.draw.rect(screen, RED, [food_x2, food_y2, boost_berry_size, boost_berry_size])
+        else:
+            pygame.draw.rect(screen, RED, [food_x2, food_y2, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
+
+        # food1_last_eaten = False
+        # food2_last_eaten = False
+
         # Draw all walls
         for wall in wall_list:
             pygame.draw.rect(screen, WHITE, [wall[0], wall[1], SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
@@ -171,37 +190,60 @@ def game_loop(food_eaten, SNAKE_SPEED):
             if len(snake_list) > length_of_snake:
                 del snake_list[0]
 
+        #speed increase
+        speed_modifier = SNAKE_SPEED + food_eaten*4
+
         # drawing the snake and displaying the score
         our_snake(SNAKE_BLOCK_SIZE, snake_list)
         display_score(food_eaten)
-        display_speed(SNAKE_SPEED + food_eaten*2)
+        display_speed(speed_modifier)
 
         pygame.display.update()
 
-        # Food Collision (Check if head position matches food position)
-        if x1 == food_x and y1 == food_y:
-            food_x, food_y = generate_food_position()
-            length_of_snake += 3
-            food_eaten += 1
-
-            # Important: Make sure new food doesn't spawn on the snake
-            # This is a common bug: the food should NOT be on the current snake body
-            while [food_x, food_y] in snake_list:
+        # FOOD1 Collision (Check if head position matches food position)
+        if food1_big:
+            if (food_x <= x1 < food_x + boost_berry_size) and (food_y <= y1 < food_y + boost_berry_size):
+                # Snake eats the big fruit
                 food_x, food_y = generate_food_position()
+                length_of_snake += 3
+                food_eaten += 1
+                food1_big = False  # Reset to normal after eating
+                while [food_x, food_y] in snake_list:
+                    food_x, food_y = generate_food_position()
+        else:
+            if x1 == food_x and y1 == food_y:
+                food_x, food_y = generate_food_position()
+                length_of_snake += 3
+                food_eaten += 1
+                food1_big = True
+                # Important: Make sure new food doesn't spawn on the snake
+                # This is a common bug: the food should NOT be on the current snake body
+                while [food_x, food_y] in snake_list:
+                    food_x, food_y = generate_food_position()
 
-        # Food Collision for x2 and y2(Check if head position matches food position)
-        if x1 == food_x2 and y1 == food_y2:
-            food_x2, food_y2 = generate_food_position()
-            length_of_snake += 3
-            food_eaten += 1
-
-            # Important: Make sure new food doesn't spawn on the snake (for x2 and y2)
-            # This is a common bug: the food should NOT be on the current snake body
-            while [food_x2, food_y2] in snake_list:
+        # FOOD2 Collision for x2 and y2(Check if head position matches food position)
+        if food2_big:
+            if (food_x2 <= x1 < food_x2 + boost_berry_size) and (food_y2 <= y1 < food_y2 + boost_berry_size):
+                # Snake eats the big fruit
                 food_x2, food_y2 = generate_food_position()
+                length_of_snake += 3
+                food_eaten += 1
+                food2_big = False  # Reset to normal after eating
+                while [food_x2, food_y2] in snake_list:
+                    food_x2, food_y2 = generate_food_position()
+        else:
+            if x1 == food_x2 and y1 == food_y2:
+                food_x2, food_y2 = generate_food_position()
+                length_of_snake += 3
+                food_eaten += 1
+                food2_big = True
+                # Important: Make sure new food doesn't spawn on the snake (for x2 and y2)
+                # This is a common bug: the food should NOT be on the current snake body
+                while [food_x2, food_y2] in snake_list:
+                    food_x2, food_y2 = generate_food_position()
 
         # walls implementation
-        def spawn_wall(length=5):
+        def spawn_wall(length):
             # Randomly choose orientation: 0 = horizontal, 1 = vertical
             orientation = random.choice([0, 1])
             while True:
@@ -248,7 +290,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
                 game_close = True
                 break
                
-        clock.tick(SNAKE_SPEED + food_eaten*2)
+        clock.tick(speed_modifier)
 
     pygame.quit()
     quit()
