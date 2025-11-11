@@ -25,10 +25,10 @@ BLACK = (0, 0, 0)
 # Snake properties
 SNAKE_BLOCK_SIZE = 20 # Keep this consistent for grid
 food_eaten = 0
-SNAKE_SPEED = 12
+SNAKE_SPEED = 8
 wall_spawn_start_time = int(time.time())  # Track game start time
 wall_list = []
-wall_spawn_interval = 6  # seconds
+wall_spawn_interval = 5.5  # seconds
 
 # initial game state
 food1_big = False
@@ -68,7 +68,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
         value = speed_font.render("Speed: " + str(SNAKE_SPEED), True, WHITE)
         screen.blit(value, [0, 30])
         
-        (SNAKE_SPEED + food_eaten*2)
+        (SNAKE_SPEED + food_eaten*1.5)
     
     # game rules
     game_over = False
@@ -206,7 +206,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
                 # Snake eats the big fruit
                 food_x, food_y = generate_food_position()
                 length_of_snake += 3
-                food_eaten += 1
+                food_eaten += 2
                 food1_big = False  # Reset to normal after eating
                 while [food_x, food_y] in snake_list:
                     food_x, food_y = generate_food_position()
@@ -226,7 +226,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
             if (food_x2 <= x1 < food_x2 + boost_berry_size) and (food_y2 <= y1 < food_y2 + boost_berry_size):
                 # Snake eats the big fruit
                 food_x2, food_y2 = generate_food_position()
-                length_of_snake += 3
+                length_of_snake += 2
                 food_eaten += 1
                 food2_big = False  # Reset to normal after eating
                 while [food_x2, food_y2] in snake_list:
@@ -234,7 +234,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
         else:
             if x1 == food_x2 and y1 == food_y2:
                 food_x2, food_y2 = generate_food_position()
-                length_of_snake += 3
+                length_of_snake += 2
                 food_eaten += 1
                 food2_big = True
                 # Important: Make sure new food doesn't spawn on the snake (for x2 and y2)
