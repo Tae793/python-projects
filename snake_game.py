@@ -25,7 +25,7 @@ BLACK = (0, 0, 0)
 # Snake properties
 SNAKE_BLOCK_SIZE = 20 # Keep this consistent for grid
 food_eaten = 0
-SNAKE_SPEED = 8
+SNAKE_SPEED = 6
 wall_spawn_start_time = int(time.time())  # Track game start time
 wall_list = []
 wall_spawn_interval = 5.5  # seconds
@@ -55,72 +55,104 @@ def display_score(score):
 def game_loop(food_eaten, SNAKE_SPEED):
     global wall_spawn_start_time
     global wall_list
-    global food1_big
-    global food2_big
 
     # boost berry variables
     boost_berry_size = SNAKE_BLOCK_SIZE * 2
-    
-    wall_list = [] # reset walls on game start
-    wall_spawn_start_time = int(time.time())  # Also reset wall timer
-    
-    def display_speed(SNAKE_SPEED):
-        value = speed_font.render("Speed: " + str(SNAKE_SPEED), True, WHITE)
-        screen.blit(value, [0, 30])
-        
-        (SNAKE_SPEED + food_eaten*1.5)
-    
-    # game rules
-    game_over = False
-    game_close = False
 
-    # Snake initial position - ensuring it starts perfectly on the grid
-    # We want it roughly in the center, snapped to the block size
+    # reset walls and timers on game start
+    wall_list = []
+    wall_spawn_start_time = int(time.time())
+
+    def display_speed(speed_value):
+        value = speed_font.render("Speed: " + str(speed_value), True, WHITE)
+        screen.blit(value, [0, 30])
+
+    # Helper to generate a food position on grid not colliding with provided avoid list
+    def generate_food_position():
+        fx = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        fy = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        return round(fx), round(fy)
+
+    def place_food(avoid_positions, max_attempts=200):
+        for _ in range(max_attempts):
+            nx, ny = generate_food_position()
+            if [nx, ny] in avoid_positions:
+                continue
+            return nx, ny
+        return None, None
+
+    # Initialize snake + game state
     x1 = (SCREEN_WIDTH // 2)
     y1 = (SCREEN_HEIGHT // 2)
-
-    # Snake initial direction (e.g., starts moving right)
     x1_change = SNAKE_BLOCK_SIZE
     y1_change = 0
 
     snake_list = []
     length_of_snake = 1
 
-    # Function to generate food position on the grid
-    def generate_food_position():
-        # Generate coordinates that are perfect multiples of SNAKE_BLOCK_SIZE
-        # Ensure food spawns within bounds, leaving space for the block itself
-        food_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-        food_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-        return round(food_x),round(food_y)
-
-    food_x, food_y = generate_food_position()
-    food_x2, food_y2 = generate_food_position()
+    # Start with two foods (behaviour matches original: first length+3, second length+2)
+    foods = []
+    fx, fy = place_food([])
+    if fx is None:
+        fx, fy = 0, 0
+    foods.append({"x": fx, "y": fy, "big": False, "length_inc": 3})
+    fx, fy = place_food([[foods[0]["x"], foods[0]["y"]]])
+    if fx is None:
+        fx, fy = 0, 0
+    foods.append({"x": fx, "y": fy, "big": False, "length_inc": 2})
 
     clock = pygame.time.Clock()
 
-    while not game_over:
+    game_over = False
+    game_close = False
 
+    while not game_over:
+        # Game-close (lost) loop
         while game_close:
             screen.fill(BLACK)
-            message("You Lost! Press Q-Quit or C-Play Again", RED)
-            display_score(food_eaten)
+            message(f"You Lost! Score: {food_eaten} — Press Q to Quit or E to Play Again", RED)
             pygame.display.update()
-            wall_blocks == spawn_wall(0)
 
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_q:
                         game_over = True
                         game_close = False
-                    if event.key == pygame.K_c:
-                        game_loop(0, 6) # Restart the game
+                    if event.key == pygame.K_e:
+                        # Clean reset of local state (no recursion)
+                        food_eaten = 0
+                        wall_list = []
+                        wall_spawn_start_time = int(time.time())
+                        # reposition foods and snake
+                        snake_list = []
+                        length_of_snake = 1
+                        x1 = (SCREEN_WIDTH // 2)
+                        y1 = (SCREEN_HEIGHT // 2)
+                        x1_change = SNAKE_BLOCK_SIZE
+                        y1_change = 0
+                        # place initial foods again (try to avoid collisions)
+                        foods = []
+                        fx, fy = place_food([])
+                        if fx is None:
+                            fx, fy = 0, 0
+                        foods.append({"x": fx, "y": fy, "big": False, "length_inc": 3})
+                        fx, fy = place_food([[foods[0]["x"], foods[0]["y"]]])
+                        if fx is None:
+                            fx, fy = 0, 0
+                        foods.append({"x": fx, "y": fy, "big": False, "length_inc": 2})
+                        game_close = False
+                        break
 
+        # Event handling (normal play)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_over = True
             if event.type == pygame.KEYDOWN:
-                # Prevent immediate reversal
+                # Kill switch: quit immediately with 'q'
+                if event.key == pygame.K_q:
+                    pygame.quit()
+                    quit()
+                # Movement controls (no immediate reversal handling here; keep as before)
                 if event.key == pygame.K_LEFT:
                     x1_change = -SNAKE_BLOCK_SIZE
                     y1_change = 0
@@ -134,165 +166,176 @@ def game_loop(food_eaten, SNAKE_SPEED):
                     y1_change = SNAKE_BLOCK_SIZE
                     x1_change = 0
 
-        # Update snake position. These are always perfectly on the grid.
+        # Update snake position
         x1 += x1_change
         y1 += y1_change
 
-        # --- Collision Checks ---
-
-        # Wall passthrough
+        # Wrap-around (wall passthrough)
         if x1 < 0:
             x1 = SCREEN_WIDTH + x1
-        
         if x1 >= SCREEN_WIDTH:
             x1 = SCREEN_WIDTH - x1
-        
-        if y1 < 0: 
-            y1 = SCREEN_HEIGHT+ y1
-
+        if y1 < 0:
+            y1 = SCREEN_HEIGHT + y1
         if y1 >= SCREEN_HEIGHT:
             y1 = SCREEN_HEIGHT - y1
-        
 
         screen.fill(BLACK)
-        
-        if food1_big == True:
-            pygame.draw.rect(screen, RED, [food_x, food_y, boost_berry_size, boost_berry_size])
-        else:
-            pygame.draw.rect(screen, RED, [food_x, food_y, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
 
-        if food2_big == True:
-            pygame.draw.rect(screen, RED, [food_x2, food_y2, boost_berry_size, boost_berry_size])
-        else:
-            pygame.draw.rect(screen, RED, [food_x2, food_y2, SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
+        # Draw foods (dynamic list)
+        for f in foods:
+            size = boost_berry_size if f.get("big", False) else SNAKE_BLOCK_SIZE
+            pygame.draw.rect(screen, RED, [f["x"], f["y"], size, size])
 
-        # food1_last_eaten = False
-        # food2_last_eaten = False
-
-        # Draw all walls
+        # Draw walls
         for wall in wall_list:
             pygame.draw.rect(screen, WHITE, [wall[0], wall[1], SNAKE_BLOCK_SIZE, SNAKE_BLOCK_SIZE])
 
-        # Assuming x1, y1 are the new coordinates for the snake's head
+        # Snake head and self-collision check
         snake_head = [x1, y1]
-
-        # --- Check for self-collision BEFORE adding the new head to snake_list ---
-        for segment in snake_list: # Iterate through the *existing* snake body
-            if snake_head == segment: # Compare the new head's position with existing body segments
+        for segment in snake_list:
+            if snake_head == segment:
                 game_close = True
-                break # No need to check further if a collision is found
+                break
 
-        # --- If no collision, then update the snake's list ---
-        if not game_over: # Only proceed if game is not over
+        # Update snake list
+        if not game_over:
             snake_list.append(snake_head)
-
-            # Maintain the snake's length
             if len(snake_list) > length_of_snake:
                 del snake_list[0]
 
-        #speed increase
-        speed_modifier = SNAKE_SPEED + food_eaten*4
+        # Speed modifier (milder growth)
+        speed_modifier = SNAKE_SPEED + food_eaten * 1
 
-        # drawing the snake and displaying the score
+        # Draw snake and HUD
         our_snake(SNAKE_BLOCK_SIZE, snake_list)
         display_score(food_eaten)
         display_speed(speed_modifier)
 
         pygame.display.update()
 
-        # FOOD1 Collision (Check if head position matches food position)
-        if food1_big:
-            if (food_x <= x1 < food_x + boost_berry_size) and (food_y <= y1 < food_y + boost_berry_size):
-                # Snake eats the big fruit
-                food_x, food_y = generate_food_position()
-                length_of_snake += 3
-                food_eaten += 2
-                food1_big = False  # Reset to normal after eating
-                while [food_x, food_y] in snake_list:
-                    food_x, food_y = generate_food_position()
-        else:
-            if x1 == food_x and y1 == food_y:
-                food_x, food_y = generate_food_position()
-                length_of_snake += 3
-                food_eaten += 1
-                food1_big = True
-                # Important: Make sure new food doesn't spawn on the snake
-                # This is a common bug: the food should NOT be on the current snake body
-                while [food_x, food_y] in snake_list:
-                    food_x, food_y = generate_food_position()
-
-        # FOOD2 Collision for x2 and y2(Check if head position matches food position)
-        if food2_big:
-            if (food_x2 <= x1 < food_x2 + boost_berry_size) and (food_y2 <= y1 < food_y2 + boost_berry_size):
-                # Snake eats the big fruit
-                food_x2, food_y2 = generate_food_position()
-                length_of_snake += 2
-                food_eaten += 1
-                food2_big = False  # Reset to normal after eating
-                while [food_x2, food_y2] in snake_list:
-                    food_x2, food_y2 = generate_food_position()
-        else:
-            if x1 == food_x2 and y1 == food_y2:
-                food_x2, food_y2 = generate_food_position()
-                length_of_snake += 2
-                food_eaten += 1
-                food2_big = True
-                # Important: Make sure new food doesn't spawn on the snake (for x2 and y2)
-                # This is a common bug: the food should NOT be on the current snake body
-                while [food_x2, food_y2] in snake_list:
-                    food_x2, food_y2 = generate_food_position()
-
-        # walls implementation
-        def spawn_wall(length):
-            # Randomly choose orientation: 0 = horizontal, 1 = vertical
-            orientation = random.choice([0, 1])
-            while True:
-                wall_blocks = []
-                wall_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-                wall_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-                for i in range(length):
-                    if orientation == 0:  # horizontal
-                        wx = wall_x + i * SNAKE_BLOCK_SIZE
-                        wy = wall_y
-                    else:  # vertical
-                        wx = wall_x
-                        wy = wall_y + i * SNAKE_BLOCK_SIZE
-                    # Check bounds
-                    if wx >= SCREEN_WIDTH or wy >= SCREEN_HEIGHT:
+        # --- Food collisions: check every food and respawn only that one ---
+        for f in foods:
+            if f.get("big", False):
+                # big berry: rectangle collision (since it's double size)
+                if (f["x"] <= x1 < f["x"] + boost_berry_size) and (f["y"] <= y1 < f["y"] + boost_berry_size):
+                    length_of_snake += f.get("length_inc", 2)
+                    food_eaten += 4
+                    f["big"] = False
+                    # respawn this food (avoid snake, other foods, walls)
+                    attempts = 0
+                    while attempts < 200:
+                        attempts += 1
+                        nx, ny = generate_food_position()
+                        if [nx, ny] in snake_list:
+                            continue
+                        if any([nx, ny] == [o["x"], o["y"]] for o in foods):
+                            continue
+                        if [nx, ny] in wall_list:
+                            continue
+                        f["x"], f["y"] = nx, ny
                         break
-                    wall_blocks.append([wx, wy])
-                # Make sure all blocks are valid and not on snake or food
-                if (len(wall_blocks) == length and
-                    all(block not in snake_list and
-                        block != [food_x, food_y] and
-                        block != [food_x2, food_y2] for block in wall_blocks)):
-                    return wall_blocks
-        # Generate a wall block not on the snake or food
-            while True:
-                wall_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-                wall_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
-                if ([wall_x, wall_y] not in snake_list and
-                    [wall_x, wall_y] != [food_x, food_y] and
-                    [wall_x, wall_y] != [food_x2, food_y2]):
-                    wall_spawn_start_time = current_time
-                    return [wall_x, wall_y]
-    
-        # --- Wall spawning logic ---
+            else:
+                # small berry: exact grid match
+                if x1 == f["x"] and y1 == f["y"]:
+                    length_of_snake += f.get("length_inc", 2)
+                    food_eaten += 2
+                    # Toggle so next spawn of this food is a boost
+                    f["big"] = True
+                    attempts = 0
+                    while attempts < 200:
+                        attempts += 1
+                        nx, ny = generate_food_position()
+                        if [nx, ny] in snake_list:
+                            continue
+                        if any([nx, ny] == [o["x"], o["y"]] for o in foods):
+                            continue
+                        if [nx, ny] in wall_list:
+                            continue
+                        f["x"], f["y"] = nx, ny
+                        break
+
+        # --- Wall spawning logic: spawn wall(s) and APPEND a new food (permanent) ---
+        MAX_FOODS = 5
+        
         current_time = int(time.time())
         if current_time - wall_spawn_start_time >= wall_spawn_interval:
-            wall_blocks = spawn_wall(length=random.randint(5, 10))
-            wall_list.extend(wall_blocks)
-            wall_spawn_start_time = current_time  # <-- Reset timer here
+            new_wall_blocks = spawn_wall(length=random.randint(5, 10), snake_list=snake_list, foods=foods)
+            if new_wall_blocks:
+                wall_list.extend(new_wall_blocks)
 
-        # --- Check for collision with walls ---
+                # Only add a new food if we are under the MAX_FOODS limit
+                if len(foods) < MAX_FOODS:
+                    for _ in range(200):
+                        nx, ny = generate_food_position()
+                        if [nx, ny] in snake_list:
+                            continue
+                        if any([nx, ny] == [o["x"], o["y"]] for o in foods):
+                            continue
+                        if [nx, ny] in wall_list:
+                            continue
+                        new_big = random.choice([True, False])
+                        foods.append({"x": nx, "y": ny, "big": new_big, "length_inc": 2})
+                        break
+            wall_spawn_start_time = current_time
+
+        # --- Collision with walls ---
         for wall in wall_list:
             if snake_head == wall:
                 game_close = True
                 break
-               
+
         clock.tick(speed_modifier)
 
     pygame.quit()
     quit()
+
+def spawn_wall(length, snake_list, foods, max_attempts=200):
+    """Return a list of `length` wall blocks [[x,y], ...] that do not collide with the snake or foods.
+    Falls back to a single block if no multi-block placement is found."""
+    attempts = 0
+    while attempts < max_attempts:
+        attempts += 1
+        orientation = random.choice([0, 1])  # 0 = horizontal, 1 = vertical
+        start_x = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        start_y = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        wall_blocks = []
+        valid = True
+        for i in range(length):
+            if orientation == 0:
+                wx = start_x + i * SNAKE_BLOCK_SIZE
+                wy = start_y
+            else:
+                wx = start_x
+                wy = start_y + i * SNAKE_BLOCK_SIZE
+            # out of bounds
+            if wx < 0 or wy < 0 or wx >= SCREEN_WIDTH or wy >= SCREEN_HEIGHT:
+                valid = False
+                break
+            # collision with snake
+            if [wx, wy] in snake_list:
+                valid = False
+                break
+            # collision with any food
+            if any([wx, wy] == [f["x"], f["y"]] for f in foods):
+                valid = False
+                break
+            wall_blocks.append([wx, wy])
+        if valid and len(wall_blocks) == length:
+            return wall_blocks
+
+    # fallback: try to place a single block
+    fallback_attempts = 0
+    while fallback_attempts < max_attempts:
+        fallback_attempts += 1
+        wx = random.randrange(0, SCREEN_WIDTH - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        wy = random.randrange(0, SCREEN_HEIGHT - SNAKE_BLOCK_SIZE + 1, SNAKE_BLOCK_SIZE)
+        if [wx, wy] in snake_list:
+            continue
+        if any([wx, wy] == [f["x"], f["y"]] for f in foods):
+            continue
+        return [[wx, wy]]
+
+    return []  # give up if nothing found
 
 game_loop(food_eaten, SNAKE_SPEED)
