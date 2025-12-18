@@ -26,7 +26,7 @@ BLACK = (0, 0, 0)
 # Snake properties
 SNAKE_BLOCK_SIZE = 20 # Keep this consistent for grid
 food_eaten = 0
-SNAKE_SPEED = 6
+SNAKE_SPEED = 8
 wall_spawn_start_time = int(time.time())  # Track game start time
 wall_list = []
 wall_spawn_interval = 5.5  # seconds
@@ -205,13 +205,11 @@ def game_loop(food_eaten, SNAKE_SPEED):
             if len(snake_list) > length_of_snake:
                 del snake_list[0]
 
-        # Speed modifier (milder growth)
-        speed_modifier = SNAKE_SPEED + food_eaten * 1
 
         # Draw snake and HUD
         our_snake(SNAKE_BLOCK_SIZE, snake_list)
         display_score(food_eaten)
-        display_speed(speed_modifier)
+        
 
         pygame.display.update()
 
@@ -286,7 +284,7 @@ def game_loop(food_eaten, SNAKE_SPEED):
                 game_close = True
                 break
 
-        clock.tick(speed_modifier)
+        clock.tick(SNAKE_SPEED)
 
     pygame.quit()
     quit()
@@ -340,3 +338,5 @@ def spawn_wall(length, snake_list, foods, max_attempts=200):
     return []  # give up if nothing found
 
 game_loop(food_eaten, SNAKE_SPEED)
+game_loop(food_eaten, SNAKE_SPEED)
+
