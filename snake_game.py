@@ -10,7 +10,8 @@ info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 
-# TODO: this doesnt handle running on a secondary bigger display as i takes the primary display size so make sure to have the screen your running the program on, set as your main display (add some code to fix this in future)
+# TODO: this doesnt handle running on a secondary bigger display as i takes the primary display size so make sure to have the screen
+#       your running the program on, set as your main display (add some code to fix this in future)
 
 # Create the screen in fullscreen mode 
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
