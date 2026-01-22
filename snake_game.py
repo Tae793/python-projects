@@ -5,6 +5,13 @@ import time
 # Initialize Pygame
 pygame.init()
 
+# Load high score from file
+try:
+    with open("highscore.txt", "r") as f:
+        high_score = int(f.read().strip())
+except FileNotFoundError:
+    high_score = 0
+
 # Get screen information for fullscreen mode
 info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
@@ -56,6 +63,7 @@ def display_score(score):
 def game_loop(food_eaten, SNAKE_SPEED):
     global wall_spawn_start_time
     global wall_list
+    global high_score
 
     # boost berry variables
     boost_berry_size = SNAKE_BLOCK_SIZE * 2
@@ -111,15 +119,34 @@ def game_loop(food_eaten, SNAKE_SPEED):
         # Game-close (lost) loop
         while game_close:
             screen.fill(BLACK)
-            message(f"You Lost! Score: {food_eaten} — Press Q to Quit or E to Play Again", RED)
+            mesg1 = font_style.render("You Lost!", True, RED)
+            text_rect1 = mesg1.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3 - 50))
+            screen.blit(mesg1, text_rect1)
+            mesg2 = font_style.render(f"Score: {food_eaten}", True, RED)
+            text_rect2 = mesg2.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3))
+            screen.blit(mesg2, text_rect2)
+            mesg3 = font_style.render(f"High Score: {high_score}", True, RED)
+            text_rect3 = mesg3.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3 + 50))
+            screen.blit(mesg3, text_rect3)
+            mesg4 = font_style.render("Press Q to Quit or E to Play Again", True, RED)
+            text_rect4 = mesg4.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3 + 100))
+            screen.blit(mesg4, text_rect4)
             pygame.display.update()
 
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_q:
+                        if food_eaten > high_score:
+                            high_score = food_eaten
+                            with open("highscore.txt", "w") as f:
+                                f.write(str(high_score))
                         game_over = True
                         game_close = False
                     if event.key == pygame.K_e:
+                        if food_eaten > high_score:
+                            high_score = food_eaten
+                            with open("highscore.txt", "w") as f:
+                                f.write(str(high_score))
                         # Clean reset of local state (no recursion)
                         food_eaten = 0
                         wall_list = []
@@ -337,6 +364,4 @@ def spawn_wall(length, snake_list, foods, max_attempts=200):
 
     return []  # give up if nothing found
 
-game_loop(food_eaten, SNAKE_SPEED)
-game_loop(food_eaten, SNAKE_SPEED)
-
+game_loop(food_eaten, SNAKE_SPEED)ess Q to Quit or E to Play Again", RED)                                                         ^^^^^^^^^^
