@@ -1,0 +1,44 @@
+#items
+item_1 = "crisps"
+item_2 = "skittles"
+item_3 = "chocolate"
+
+#pricing
+prices = {
+    "crisps": 1.50,
+    "skittles": 1.99,
+    "chocolate": 3.00
+}
+
+print("we have", item_1, item_2, item_3, "in stock")
+
+selecting = input("what item would you like to purchase? ")
+total = 0
+if selecting == item_1:
+    amount_1 = int(input("and how many would you like? "))
+    total = prices[item_1] * amount_1
+    print(f"That will be £{total:.2f} please")
+elif selecting == item_2:
+    amount_2 = int(input("and how many would you like? "))
+    total = prices[item_2] * amount_2
+    print(f"That will be £{total:.2f} please")
+elif selecting == item_3:
+    amount_3 = int(input("and how many would you like? "))
+    total = prices[item_3] * amount_3
+    print(f"That will be £{total:.2f} please")
+else:
+    print("Item not available")
+
+if total > 0:
+    payment_method = input("please select cash or card: ")
+    if payment_method.lower() == "cash":
+        paid = float(input(f"ok please insert £{total:.2f} or more: "))
+        if paid >= total:
+            change = paid - total
+            print(f"Thank you. Your change is £{change:.2f} have a nice day!")
+        else:
+            print("Insufficient payment.")
+    elif payment_method.lower() == "card":
+        print("Payment approved. Thank you!")
+    else:
+        print("Invalid payment method.")
