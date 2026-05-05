@@ -1,0 +1,26 @@
+#you must put these commands in the terminal individually before running the code
+#pip install keyboard
+#pip install pyautogui
+
+import pyautogui
+import keyboard
+import time
+
+def move_mouse_to_center():
+    # Get screen size and calculate center
+    screen_width, screen_height = pyautogui.size()
+    center_x = screen_width / 2
+    center_y = screen_height / 2
+    
+    # Move the mouse
+    pyautogui.moveTo(center_x, center_y, duration=0.2)
+    print(f"Centred at: {center_x}, {center_y}")
+
+# Set the global hotkey (Ctrl + Alt + C)
+keyboard.add_hotkey('ctrl+alt+c', move_mouse_to_center)
+
+print("Script is running in the background...")
+print("Press 'Ctrl + Alt + C' to center mouse. Press 'Esc' to stop script.")
+
+# Keep the script running until you press 'Esc'
+keyboard.wait('esc')
